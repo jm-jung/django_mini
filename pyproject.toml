@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "mini-django"
+version = "0.1.0"
+description = ""
+authors = ["jm-jung <jmsk7554@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+django = "^5.1.1"
+django-restframework = "^0.0.1"
+
+[tool.isort]
+profile = "black"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.8.0"
+mypy = "^1.11.2"
+isort = "^5.13.2"
+django-stubs = "^5.0.4"
+coverage = "^7.6.1"
+drf-spectacular = "^0.27.2"
+
+
+[tool.coverage.report]
+fail_under = 80
+
+[tool.coverage.run]
+omit = [
+  ".mypy_cache/**/*",
+  "*/migrations/*",
+  "*/*test*.py",
+]
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+python_version = 3.12
+strict = true
+
+[[tool.mypy.overrides]]
+module = "*.migrations.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "manage"
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "djangoProject.settings"
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
