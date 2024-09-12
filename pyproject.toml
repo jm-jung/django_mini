@@ -9,6 +9,7 @@ readme = "README.md"
 python = "^3.12"
 django = "^5.1.1"
 django-restframework = "^0.0.1"
+psycopg2-binary = "^2.9.9"
 
 [tool.isort]
 profile = "black"
@@ -46,7 +47,7 @@ module = "manage"
 ignore_errors = true
 
 [tool.django-stubs]
-django_settings_module = "djangoProject.settings"
+django_settings_module = "config.settings"
 
 
 
