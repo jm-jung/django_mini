@@ -1,0 +1,84 @@
+# .github/workflows/checks.yml
+
+name: Code Quality Checks
+
+# 트리거 이벤트 부분으로 코드가 푸시되거나 풀 리퀘스트가 생성될 때 CI가 실행됩니다.
+on:
+push:
+  branches:
+        - main
+pull_request:
+      branches:
+        - main
+
+jobs:
+  ci:
+  # 가장 최신버젼의 ubuntu를 OS 환경으로 설정합니다.
+    runs-on: ubuntu-latest
+    # services 키워드를 사용하여 PostgreSQL 서비스를 설정
+    services:
+      db:
+        image: postgres:14
+        ports:
+          - 5432:5432
+        # Github Secrets에서 가져와서 env로 등록, Postgres 데이터 베이스 연결 설정
+        env:
+          POSTGRES_USER: ${{ secrets.PG_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.PG_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.PG_NAME }}
+        # 옵션으로 postgres의 연결 상태를 확인. 10초 단위로 5번 재시도. 5초간 기다림.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+# CI 환경에서 코드를 체크아웃합니다.
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+# CI 환경에서 사용할 파이썬 버젼을 지정합니다.
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+# Poetry를 설치합니다.
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+# Poetry를 사용하여 의존성 패키지들을 설치합니다.
+    - name: Install Packages & Libraries
+      run: |
+        poetry install
+
+# isort를 사용하여 import 구문의 정렬 순서를 체크합니다.
+    - name: Run isort (Import sorting)
+      run: |
+        poetry run isort . --check --diff
+
+# black을 사용하여 PEP8 코드스타일을 준수했는지 체크합니다.
+    - name: Run black (Code formatting)
+      run: |
+        poetry run black . --check
+
+    # db 연결을 테스트
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p ${{ secrets.DB_PORT }} -U ${{ secrets.DB_USER }}; do
+          sleep 1
+        don
+
+    # 정상적인 db연결을 확인했으니 마이그레이션 수행
+    - name: Run Django Migration
+      run: |
+        poetry run python manage.py makemigrations
+        poetry run python manage.py migrate
+
+    # django test를 사용하여 모든 앱의 테스트코드를 실행합니다.
+    - name: Test python project
+      run: |
+        poetry run python manage.py test
