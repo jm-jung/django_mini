@@ -1,3 +1,33 @@
 from django.db import models
+from django.utils import timezone
 
-# Create your models here.
+
+class Account(models.Model):
+    account_number = models.CharField(max_length=10, unique=True)
+    balance = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+class Transaction(models.Model):
+    DEPOSIT = "DE"
+    WITHDRAWAL = "WI"
+    TRANSACTION_TYPES = [
+        (DEPOSIT, "Deposit"),
+        (WITHDRAWAL, "Withdrawal"),
+    ]
+
+    account_info = models.ForeignKey(Account, on_delete=models.CASCADE)
+    transaction_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    balance_after_transaction = models.DecimalField(max_digits=15, decimal_places=2)
+    transaction_description = models.CharField(max_length=20)
+    transaction_type = models.CharField(
+        max_length=2,
+        choices=TRANSACTION_TYPES,
+        default=DEPOSIT,
+    )
+    transaction_method = models.CharField(
+        max_length=20
+    )  # Assuming this field is for deposit/withdrawal method
+    transaction_datetime = models.DateTimeField(default=timezone.now)
+
+    def __str__(self) -> str:
+        return f"{self.transaction_type} - {self.transaction_amount}"

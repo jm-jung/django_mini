@@ -77,8 +77,8 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "mini_django",
-        "USER": "mac",
+        "NAME": "django_mini",
+        "USER": "woojinan",
         "PASSWORD": "1234",
         "HOST": "localhost",
         "PORT": "5432",
