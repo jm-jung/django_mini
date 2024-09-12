@@ -1,2 +1,7 @@
 .python-version
-__
+.idea/
+__pycache__/
+.DS_Store
+.mypy_cache/
+.venv/
+.coverage
