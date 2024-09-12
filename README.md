@@ -29,7 +29,7 @@
   계좌종류<br>
   잔액<br>
   로 이루어져있다.
-
+  <hr>
 
   transactions 테이블은, primary key인 <strong>Id</strong>가 있고,<br>
   정한 계좌에 해당되는 정보를 가져와야하기 때문에 foreign key로 <strong>Accounts_Id</strong>를 가져와야한다. 필드엔<br> 
