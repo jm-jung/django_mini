@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from users.models import Users
 
-from .models import AccountModel, Transaction
+from transactions.models import AccountModel, Transaction
 
 User = get_user_model()
 
