@@ -1,10 +1,7 @@
 from django.db import models
 from django.utils import timezone
 
-
-class Account(models.Model):
-    account_number = models.CharField(max_length=10, unique=True)
-    balance = models.DecimalField(max_digits=10, decimal_places=2)
+from accounts.models import AccountModel
 
 
 class Transaction(models.Model):
@@ -15,7 +12,7 @@ class Transaction(models.Model):
         (WITHDRAWAL, "Withdrawal"),
     ]
 
-    account_info = models.ForeignKey(Account, on_delete=models.CASCADE)
+    account_info = models.ForeignKey(AccountModel, on_delete=models.CASCADE)
     transaction_amount = models.DecimalField(max_digits=15, decimal_places=2)
     balance_after_transaction = models.DecimalField(max_digits=15, decimal_places=2)
     transaction_description = models.CharField(max_length=20)
