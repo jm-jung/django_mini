@@ -12,7 +12,9 @@ class Transaction(models.Model):
         (WITHDRAWAL, "Withdrawal"),
     ]
 
-    account_info = models.ForeignKey(AccountModel, on_delete=models.CASCADE)
+    account_info = models.ForeignKey(
+        AccountModel, on_delete=models.CASCADE, related_name="transactions"
+    )
     transaction_amount = models.DecimalField(max_digits=15, decimal_places=2)
     balance_after_transaction = models.DecimalField(max_digits=15, decimal_places=2)
     transaction_description = models.CharField(max_length=20)
