@@ -9,3 +9,4 @@ __pycache__/
 *.pgsql
 *.sql
 pgdata/
+.env/
