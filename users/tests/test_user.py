@@ -67,3 +67,5 @@ class UsersTestCase(TestCase):
     def test_is_admin_default(self):
         user = User.objects.create_user(**self.user_data)
         self.assertFalse(user.is_admin)
+
+    # def test_signup
