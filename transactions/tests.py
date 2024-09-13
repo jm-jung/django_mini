@@ -50,7 +50,3 @@ class TransactionModelTest(TestCase):
         transaction_datetime = transaction.transaction_datetime.replace(microsecond=0)
         self.assertEqual(transaction_datetime, now)
 
-    # def test_transaction_non_user_id(self):
-    #     transaction = Transaction.objects.get(id=self.transaction.id)
-    #     with self.assertRaises(IntegrityError):
-    #         transaction.objects.create(account_info=None)
