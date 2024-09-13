@@ -9,4 +9,6 @@ __pycache__/
 *.pgsql
 *.sql
 pgdata/
-.env/
+.env
+.secret.json
+
