@@ -11,7 +11,6 @@ from users.models import Users
 class AccountsTestCase(TestCase):
 
     def setUp(self) -> None:
-
         self.user = Users.objects.create_user(
             email="testuser@example.com",
             password="testpass",
