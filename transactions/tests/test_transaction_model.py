@@ -2,9 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from users.models import Users
-
-from .models import AccountModel, Transaction
+from accounts.models import AccountModel
+from transactions.models import Transaction
 
 User = get_user_model()
 
