@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from typing import List
 
+from django.core.management import templates
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -48,7 +49,15 @@ INSTALLED_APPS = [
     "users",
     "accounts",
     "transactions",
+    "rest_framework_simplejwt",
+    "rest_framework",
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -65,7 +74,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR/"templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

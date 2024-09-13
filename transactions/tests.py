@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
@@ -48,3 +49,8 @@ class TransactionModelTest(TestCase):
         now = timezone.now().replace(microsecond=0)
         transaction_datetime = transaction.transaction_datetime.replace(microsecond=0)
         self.assertEqual(transaction_datetime, now)
+
+    # def test_transaction_non_user_id(self):
+    #     transaction = Transaction.objects.get(id=self.transaction.id)
+    #     with self.assertRaises(IntegrityError):
+    #         transaction.objects.create(account_info=None)

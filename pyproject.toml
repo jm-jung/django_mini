@@ -10,6 +10,7 @@ python = "^3.12"
 django = "^5.1.1"
 django-restframework = "^0.0.1"
 psycopg2-binary = "^2.9.9"
+djangorestframework-simplejwt = "^5.3.1"
 
 [tool.isort]
 profile = "black"
