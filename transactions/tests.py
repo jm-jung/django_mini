@@ -1,16 +1,29 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import Account, Transaction
+from users.models import Users
+
+from .models import AccountModel, Transaction
+
+User = get_user_model()
 
 
 class TransactionModelTest(TestCase):
 
     def setUp(self) -> None:
         now = timezone.now()
+        # 유저 생성
+        self.user = User.objects.create_user(
+            name="test",
+            email="example@example.com",
+            password="1234",
+            nickname="test_test",
+            phone_number="1234567890",
+        )
         # 테스트 계좌를 생성합니다.
-        self.account = Account.objects.create(
-            account_number="1234567890", balance=1000.00
+        self.account = AccountModel.objects.create(
+            account_number="1234567890", balance=1000.00, user=self.user
         )
         # 테스트 트랜잭션을 생성합니다.
         self.transaction = Transaction.objects.create(

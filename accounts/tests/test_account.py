@@ -12,7 +12,7 @@ class AccountsTestCase(TestCase):
         self.user = Users.objects.create_user(
             email="testuser@example.com",
             password="testpass",
-            phone_number="01012345678"
+            phone_number="01012345678",
         )
 
         self.account = AccountModel.objects.create(
