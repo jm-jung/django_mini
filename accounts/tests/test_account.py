@@ -142,7 +142,7 @@ class TransactionTests(APITestCase):
         """
         data = {
             'account_number': '1234567890',
-            'amount': 500,
+            'amount': '500.00',  # 문자열로 보내야 함
             'transaction_type': 'DE'
         }
         self.client.force_authenticate(user=self.user)
@@ -165,7 +165,7 @@ class TransactionTests(APITestCase):
         """
         data = {
             'account_number': '1234567890',
-            'amount': 300,
+            'amount': '300.00',  # 문자열로 보내야 함
             'transaction_type': 'WI'
         }
         self.client.force_authenticate(user=self.user)
@@ -186,10 +186,9 @@ class TransactionTests(APITestCase):
         """
         잔액 부족으로 출금 실패 테스트
         """
-        # 출금 요청 시 잔액 부족으로 인해 실패해야 함
         data = {
             'account_number': '1234567890',
-            'amount': 2000,
+            'amount': '2000.00',  # 문자열로 보내야 함
             'transaction_type': 'WI'
         }
         self.client.force_authenticate(user=self.user)
@@ -206,7 +205,7 @@ class TransactionTests(APITestCase):
         """
         data = {
             'account_number': '0000000000',
-            'amount': 100,
+            'amount': '100.00',  # 문자열로 보내야 함
             'transaction_type': 'DE'
         }
         self.client.force_authenticate(user=self.user)
