@@ -8,46 +8,42 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
 from users.serializers import MyTokenObtainPairSerializer, UserSerializer
 
 
 class RegisterAPIView(CreateAPIView):
     serializer_class = UserSerializer
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        # serializer.is_valid(raise_exception=True)
-        # self.perform_create(serializer)
-        # headers = self.get_success_headers(serializer.data)
-        #
-        # # refresh = RefreshToken.for_user(serializer.instance)
-        # # response_data = {'refresh': str(refresh), 'access': str(refresh.access_token)}
-        # return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        if serializer.is_valid():
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            # 이메일 인증 로직 (예시)
-            # send_verification_email(user)
-
-            # 민감한 정보를 제외한 응답 데이터
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED, headers=headers
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        user = serializer.save()
+        user.set_password(serializer.validated_data['password'])
+        user.save()
+        try:
+            send_verification_email(user)
+        except Exception as e:
+            print(f"Error sending verification email: {str(e)}")  # 디버깅
+        return user
 
 
 def send_verification_email(user):
-    # 이메일 인증 로직 구현
     subject = "Verify your email"
-    message = f"Please click the link to verify your email: {settings.SITE_URL}/verify/{user.id}/"
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
+    message = f"Please verify your email. User ID: {user.id}"
+    from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@example.com'
+    recipient_list = [user.email]
+
+    try:
+        send_mail(subject, message, from_email, recipient_list)
+    except Exception as e:
+        print(f"Failed to send email: {str(e)}")  # 디버깅
+        raise  # 예외를 다시 발생시켜 상위 레벨에서 처리할 수 있게 함
 
 
 def perform_create(self, serializer):
     user = serializer.save()
-    user.set_password(serializer.validated_data["password"])
+    user.set_password(serializer.validated_data['password'])
     user.save()
+    send_verification_email(user)
+    return user
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

@@ -12,6 +12,7 @@ django-restframework = "^0.0.1"
 psycopg2-binary = "^2.9.9"
 djangorestframework-simplejwt = "^5.3.1"
 django-extensions = "^3.2.3"
+requests = "^2.32.3"
 
 [tool.isort]
 profile = "black"

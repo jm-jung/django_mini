@@ -167,3 +167,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.Users"
 
 SIMPLE_JWT_AUTH_COOKIE = "auth_token"
+
+EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@example.com'
+NAVER_CLIENT_ID = os.getenv('NAVER_CLIENT_ID')
+NAVER_SECRET = os.getenv('NAVER_SECRET')
