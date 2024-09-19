@@ -1,11 +1,15 @@
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveDestroyAPIView
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from accounts.models import AccountModel
+from rest_framework import status
 from accounts.serializers import AccountSerializer
+from accounts.models import AccountModel
+from transactions.models import Transaction
+from transactions.serializers import TransactionSerializer
+from .serializers import DepositWithdrawSerializer
 
 
 class AccountQuerySetMixin:
@@ -44,3 +48,42 @@ class AccountDetailView(AccountQuerySetMixin, RetrieveDestroyAPIView):
         if instance.balance > 0:
             raise ValidationError("계좌에 잔액이 남아있으면 삭제할 수 없습니다.")
         instance.delete()
+        
+class DepositWithdrawView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = DepositWithdrawSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            account = serializer.validated_data['account']
+            amount = serializer.validated_data['amount']
+            transaction_type = serializer.validated_data['transaction_type']
+
+            if transaction_type == Transaction.DEPOSIT:
+                account.balance += amount
+                transaction_description = '입금'
+            else:  # WITHDRAWAL
+                account.balance -= amount
+                transaction_description = '출금'
+
+            # 계좌 잔액을 업데이트하여 저장
+            account.save()
+
+            # 거래 기록을 생성하고 저장
+            transaction = Transaction.objects.create(
+                account_info=account,
+                transaction_amount=amount,
+                balance_after_transaction=account.balance,
+                transaction_description=transaction_description,
+                transaction_type=transaction_type,
+                transaction_method='Manual' # 필요에 따라 수정할 수 있음
+            )
+
+            # 거래 데이터를 직렬화
+            transaction_serializer = TransactionSerializer(transaction)
+
+            # 성공 응답을 반환
+            return Response(transaction_serializer.data, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
