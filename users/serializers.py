@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from users.models import Users
+
 User = get_user_model()
 
 
@@ -57,3 +59,15 @@ class TokenRefreshSerializer(serializers.Serializer):
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     pass
+
+
+class NicknameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Users
+        fields = ['nickname']
+
+    def create(self, validated_data):
+        user = Users(**validated_data)
+        user.set_password(Users.objects.make_random_password())
+        user.save()
+        return user

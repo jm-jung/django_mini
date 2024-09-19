@@ -1,6 +1,8 @@
+from unittest.mock import patch
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core import mail
+from django.core import mail, signing
 from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
@@ -9,6 +11,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from ..models import Users
+from ..oauth_views import NAVER_STATE
 
 User = get_user_model()
 
@@ -166,11 +169,16 @@ class UserSignUpTestCase(TestCase):
         user = User.objects.get(email=self.user_data["email"])
         self.assertNotEqual(self.user_data["password"], user.password)
 
-    # def test_email_verification(self):
-    #     response = self.client.post(self.register_url, self.user_data, format='json')
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(len(mail.outbox), 1)
-    #     self.assertIn('Verify your email', mail.outbox[0].subject)
+    def test_email_verification(self):
+        user_data = self.user_data.copy()
+        user_data["password"] = "TestPassword123!"
+        user_data["password2"] = "TestPassword123!"
+        response = self.client.post(self.register_url, user_data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(mail.outbox), 1, "Verification email was not sent")
+        self.assertIn('Verify your email', mail.outbox[0].subject)
+        self.assertIn(user_data['email'], mail.outbox[0].to)
 
     def test_jwt_login(self):
         # 사용자 생성 및 이메일 인증 (이 부분은 귀하의 인증 로직에 맞게 조정해야 합니다)
@@ -240,3 +248,82 @@ class UserSignUpTestCase(TestCase):
             refresh_url, {"refresh": str(refresh)}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+# class OAuthTest(TestCase):
+#     def setUp(self):
+#         self.naver_login_url = reverse("oauth:naver_login")
+#         self.naver_callback_url = reverse("oauth:naver_callback")  # 오타 주의: 'collback'으로 되어 있음
+#         self.mock_token = 'mock_token'
+#         self.mock_code = 'mock_code'
+#         self.mock_state = 'mock_state'
+#         self.existing_user_email = 'existinguser@example.com'
+#         self.new_user_email = 'newuser@example.com'
+#         self.valid_state = signing.dumps("naver_login")
+#         # 기존 사용자 생성
+#         self.existing_user = User.objects.create_user(
+#             email=self.existing_user_email,
+#             password='testpass123@',
+#             phone_number='1234567890',
+#         )
+#
+#     def test_naver_login_redirect(self):
+#         response = self.client.get(self.naver_login_url)
+#         self.assertEqual(response.status_code, 302)  # 리다이렉트 확인
+#         self.assertTrue('https://nid.naver.com/oauth2.0/authorize' in response.url)
+#
+#     @patch('users.oauth_views.requests.get')
+#     @patch('users.oauth_views.get_naver_access_token')
+#     def test_naver_callback_new_user(self, mock_get_token, mock_get):
+#         mock_get_token.return_value = self.mock_token
+#         mock_get.return_value.json.return_value = {
+#             'response': {
+#                 'email': self.new_user_email,
+#                 'name': 'New User'
+#             }
+#         }
+#         mock_get.return_value.status_code = 200
+#
+#         response = self.client.get(self.naver_callback_url, {'code': self.mock_code, 'state': self.mock_state})
+#
+#         self.assertEqual(response.status_code, 302)  # Redirect after successful login
+#         self.assertTrue(User.objects.filter(email=self.new_user_email).exists())
+#
+#     @patch('users.oauth_views.requests.get')
+#     @patch('users.oauth_views.get_naver_access_token')
+#     def test_naver_callback_existing_user(self, mock_get_token, mock_get):
+#         mock_get_token.return_value = self.mock_token
+#         mock_get.return_value.json.return_value = {
+#             'response': {
+#                 'email': self.existing_user_email,
+#                 'name': 'Existing User'
+#             }
+#         }
+#         mock_get.return_value.status_code = 200
+#
+#         response = self.client.get(self.naver_callback_url, {'code': self.mock_code, 'state': self.mock_state})
+#
+#         self.assertEqual(response.status_code, 302)  # Redirect after successful login
+#         self.assertEqual(User.objects.count(), 1)  # No new user created
+#         user = User.objects.get(email=self.existing_user_email)
+#         self.assertTrue(user.is_active)
+#
+#     @patch('users.oauth_views.requests.get')
+#     @patch('users.oauth_views.get_naver_access_token')
+#     def test_oauth_nickname_redirect(self, mock_get_profile, mock_get_token):
+#         mock_get_token.return_value = self.mock_token
+#         mock_get_profile.return_value = {
+#             'email': self.new_user_email,
+#             'name': 'New User'
+#         }
+#
+#         valid_state = signing.dumps(NAVER_STATE)
+#         response = self.client.get(self.naver_callback_url, {
+#             'code': self.mock_code,
+#             'state': valid_state
+#         })
+#
+#         self.assertEqual(response.status_code, 302)  # Redirect to nickname page
+#         expected_url = reverse('oauth:nickname') + f'?access_token={self.mock_token}'
+#         self.assertRedirects(response, expected_url, fetch_redirect_response=False)
+
