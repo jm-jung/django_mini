@@ -1,63 +1,129 @@
-from django.db import transaction
+from django.conf import settings
+from django.core.mail import send_mail
 from rest_framework import status
-from rest_framework.views import APIView
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken
-from tutorial.quickstart.serializers import UserSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from users.serializers import MyTokenObtainPairSerializer, UserSerializer
 
 
-class RegisterView(APIView):
-    class RegisterView(APIView):
-        permission_classes = (AllowAny,)
+class RegisterAPIView(CreateAPIView):
+    serializer_class = UserSerializer
 
-        @transaction.atomic
-        def post(self, request):
-            serializer = UserSerializer(data=request.data)
-            if serializer.is_valid():
-                try:
-                    user = serializer.save()
-                    if user is None:
-                        return Response({"error": "User creation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def perform_create(self, serializer):
+        user = serializer.save()
+        user.set_password(serializer.validated_data['password'])
+        user.save()
+        try:
+            send_verification_email(user)
+        except Exception as e:
+            print(f"Error sending verification email: {str(e)}")  # 디버깅
+        return user
 
-                    refresh = RefreshToken.for_user(user)
-                    return Response({
-                        'user': serializer.data,
-                        'refresh': str(refresh),
-                        'access': str(refresh.access_token),
-                    }, status=status.HTTP_201_CREATED)
-                except Exception as e:
-                    return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-class LoginView(APIView):
-    permission_classes = (AllowAny,)
 
-    def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
-        from django.contrib.auth import authenticate
-        user = authenticate(email=email, password=password)
-        #유저가 등록한 정보와 일치하는지 확인
-        if user:
-            #유저가 맞으면 토큰을 줌
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.token),
-            },
-                status=status.HTTP_200_OK)
-        return Response({'errpr': "이메일 혹은 비밀번호르 다시 확인해주세요."},
-                        status=status.HTTP_400_BAD_REQUEST)
+def send_verification_email(user):
+    subject = "Verify your email"
+    message = f"Please verify your email. User ID: {user.id}"
+    from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@example.com'
+    recipient_list = [user.email]
+
+    try:
+        send_mail(subject, message, from_email, recipient_list)
+    except Exception as e:
+        print(f"Failed to send email: {str(e)}")  # 디버깅
+        raise  # 예외를 다시 발생시켜 상위 레벨에서 처리할 수 있게 함
+
+
+def perform_create(self, serializer):
+    user = serializer.save()
+    user.set_password(serializer.validated_data['password'])
+    user.save()
+    send_verification_email(user)
+    return user
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            access_token = response.data["access"]
+            refresh_token = response.data["refresh"]
+            response.set_cookie(
+                settings.SIMPLE_JWT_AUTH_COOKIE,
+                access_token,
+                max_age=settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
+                httponly=settings.SIMPLE_JWT_AUTH_COOKIE_HTTP_ONLY,
+                secure=settings.SIMPLE_JWT_AUTH_COOKIE_SECURE,
+                samesite=settings.SIMPLE_JWT_AUTH_COOKIE_SAMESITE,
+                path=settings.SIMPLE_JWT_AUTH_COOKIE_PATH,
+            )
+            response.set_cookie(
+                "refresh_token",
+                refresh_token,
+                max_age=settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"],
+                httponly=True,
+                secure=settings.SIMPLE_JWT_AUTH_COOKIE_SECURE,
+                samesite=settings.SIMPLE_JWT_AUTH_COOKIE_SAMESITE,
+                path=settings.SIMPLE_JWT_AUTH_COOKIE_PATH,
+            )
+        return response
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        refresh_token = request.data.get("refresh")
+        try:
+            token = RefreshToken(refresh_token)
+
+            # 토큰이 블랙리스트에 있는지 확인
+            jti = token.payload["jti"]
+            if BlacklistedToken.objects.filter(token__jti=jti).exists():
+                return Response(
+                    {"detail": "Token is blacklisted."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
+            response = super().post(request, *args, **kwargs)
+
+            if response.status_code == 200:
+                access_token = response.data["access"]
+                response.set_cookie(
+                    settings.SIMPLE_JWT_AUTH_COOKIE,
+                    access_token,
+                    max_age=settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"],
+                    httponly=settings.SIMPLE_JWT_AUTH_COOKIE_HTTP_ONLY,
+                    secure=settings.SIMPLE_JWT_AUTH_COOKIE_SECURE,
+                    samesite=settings.SIMPLE_JWT_AUTH_COOKIE_SAMESITE,
+                    path=settings.SIMPLE_JWT_AUTH_COOKIE_PATH,
+                )
+            return response
+        except TokenError:
+            return Response(
+                {"detail": "Token is invalid or expired"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LogoutView(APIView):
-    permission_classes = (IsAuthenticated,)
-
     def post(self, request):
         try:
-            refresh_token = request.data["refresh_token"]
+            refresh_token = request.data.get("refresh")
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({"success": "Successfully logged out."})
-        except Exception as e:
-            return Response({"error": str(e)}, status=400)
+        except TokenError:
+            pass  # 토큰이 유효하지 않더라도 로그아웃 처리
+
+        response = Response(
+            {"detail": "Successfully logged out."}, status=status.HTTP_200_OK
+        )
+        response.delete_cookie(settings.SIMPLE_JWT_AUTH_COOKIE)
+        response.delete_cookie("refresh_token")
+        return response
