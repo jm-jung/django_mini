@@ -50,3 +50,8 @@ class TransactionModelTest(TestCase):
         # 5초의 오차 범위를 허용
         time_difference = abs((now - transaction_datetime).total_seconds())
         self.assertLess(time_difference, 5, "Transaction datetime should be within 5 seconds of current time")
+
+    def test_str_representation(self) -> None:
+        expected_str = f"{self.transaction.transaction_type} - {self.transaction.transaction_amount}"
+
+        self.assertEqual(str(self.transaction), expected_str)
