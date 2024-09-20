@@ -44,6 +44,9 @@ class TransactionModelTest(TestCase):
         self.assertEqual(transaction.transaction_type, Transaction.DEPOSIT)
         self.assertEqual(transaction.transaction_method, "Online")
 
-        now = timezone.now().replace(microsecond=0)
-        transaction_datetime = transaction.transaction_datetime.replace(microsecond=0)
-        self.assertEqual(transaction_datetime, now)
+        now = timezone.now()
+        transaction_datetime = transaction.transaction_datetime
+
+        # 5초의 오차 범위를 허용
+        time_difference = abs((now - transaction_datetime).total_seconds())
+        self.assertLess(time_difference, 5, "Transaction datetime should be within 5 seconds of current time")
