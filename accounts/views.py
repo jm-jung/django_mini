@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListCreateAPIView, RetrieveDestroyAPIView
@@ -52,37 +53,50 @@ class AccountDetailView(AccountQuerySetMixin, RetrieveDestroyAPIView):
 class DepositWithdrawView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         serializer = DepositWithdrawSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            account = serializer.validated_data['account']
+            source_account = serializer.validated_data['account']
             amount = serializer.validated_data['amount']
             transaction_type = serializer.validated_data['transaction_type']
 
-            if transaction_type == Transaction.DEPOSIT:
-                account.balance += amount
+            target_account_number = request.data.get('target_account_number')
+            target_account = None
+            if target_account_number:
+                try:
+                    target_account = AccountModel.objects.get(account_number=target_account_number)
+                except AccountModel.DoesNotExist:
+                    raise ValidationError('송금 대상 계좌가 존재하지 않습니다.')
+
+            if transaction_type == Transaction.WITHDRAWAL:
+                if source_account.balance < amount:
+                    raise ValidationError('잔액이 부족하여 출금할 수 없습니다.')
+                source_account.balance -= amount
+                if target_account:
+                    target_account.balance += amount
+                    transaction_description = '출금 및 입금'
+                else:
+                    transaction_description = '출금'
+
+            elif transaction_type == Transaction.DEPOSIT:
+                source_account.balance += amount
                 transaction_description = '입금'
-            else:  # WITHDRAWAL
-                account.balance -= amount
-                transaction_description = '출금'
 
-            # 계좌 잔액을 업데이트하여 저장
-            account.save()
+            source_account.save()
+            if target_account:
+                target_account.save()
 
-            # 거래 기록을 생성하고 저장
             transaction = Transaction.objects.create(
-                account_info=account,
+                account_info=source_account,
                 transaction_amount=amount,
-                balance_after_transaction=account.balance,
+                balance_after_transaction=source_account.balance,
                 transaction_description=transaction_description,
                 transaction_type=transaction_type,
-                transaction_method='Manual' # 필요에 따라 수정할 수 있음
+                transaction_method='Manual'
             )
 
-            # 거래 데이터를 직렬화
             transaction_serializer = TransactionSerializer(transaction)
-
-            # 성공 응답을 반환
             return Response(transaction_serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
