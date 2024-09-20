@@ -8,7 +8,10 @@ from django.views.generic import RedirectView
 from django.shortcuts import redirect, render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework import status
+from django.conf import settings
+from urllib.parse import urlencode
 
 from config import settings
 from django.urls import reverse
@@ -26,12 +29,10 @@ User = get_user_model()
 
 class NaverLoginRedirectView(RedirectView):
     def get_redirect_url(self, *args, **kwargs):
-        domain = self.request.scheme + '://' + self.request.META('HTTP_HOST', '')
-
+        domain = self.request.scheme + '://' + self.request.META.get('HTTP_HOST', '127.0.0.1:8000')
         callback_url = domain + NAVER_CALLBACK_URL
         state = signing.dumps(NAVER_STATE)
 
-        from django.conf import settings
         params = {
             'response_type': 'code',
             'client_id': settings.NAVER_CLIENT_ID,
@@ -39,7 +40,6 @@ class NaverLoginRedirectView(RedirectView):
             'state': state
         }
 
-        from urllib.parse import urlencode
         return f'{NAVER_LOGIN_URL}?{urlencode(params)}'
 
 
@@ -47,17 +47,13 @@ def naver_callback(request):
     code = request.GET.get('code')
     state = request.GET.get('state')
 
-    if signing.loads(state) != NAVER_STATE:
+    if NAVER_STATE != signing.loads(state):
         raise Http404('Invalid state')
 
     access_token = get_naver_access_token(code, state)
 
     profile_response = get_naver_profile(access_token)
-    print('profile_request', profile_response)
     email = profile_response.get('email')
-
-    print(email)
-
     user = User.objects.filter(email=email).first()
 
     if user:
@@ -67,18 +63,26 @@ def naver_callback(request):
 
         login(request, user)
         return redirect(reverse("account-list-create"))
-    return redirect(reverse('oauth:nickname') + f'?access_token={access_token}')
+    nickname_url = reverse("oauth:nickname")
+    if not user:
+        user = User.objects.create_user(
+            email=email,
+            password='temp_password',  # 임시 비밀번호
+            phone_number='some_phone_number'  # 적절한 값으로 수정
+        )
+    return redirect(f'{nickname_url}?access_token={access_token}')
 
 
 @csrf_exempt
-@api_view(['POST'])
+@api_view(['GET'])
 def oauth_nickname(request):
     access_token = request.GET.get('access_token')
 
     if not access_token:
         return Response({'error': 'No access token provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = NicknameSerializer(data=request.data)
+    data = {'nickname': request.GET.get('nickname')}
+    serializer = NicknameSerializer(data=data)
     if serializer.is_valid():
         profile = get_naver_profile(access_token)
         email = profile.get('email')
@@ -119,8 +123,6 @@ def get_naver_profile(access_token):
     }
     response = requests.get(NAVER_PROFILE_URL, headers=headers)
     if response.status_code != 200:
-        raise Http404('Invalid code')
+        raise Http404('Invalid Access Token')
 
-    result = response.json()
-
-    return result.get('response')
+    return response.json().get('response')

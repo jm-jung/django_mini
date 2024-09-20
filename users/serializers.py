@@ -68,6 +68,6 @@ class NicknameSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = Users(**validated_data)
-        user.set_password(Users.objects.make_random_password())
+        user.set_unusable_password()
         user.save()
         return user
