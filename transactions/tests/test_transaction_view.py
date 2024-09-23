@@ -42,8 +42,8 @@ class TransactionSerializerTests(TestCase):
         data = self.serializer.data
         masked_account_number = data["masked_account_number"]
 
-        expedted_masked_account_number = "12341234****"
-        self.assertEqual(masked_account_number, expedted_masked_account_number)
+        expected_masked_account_number = "12341234****"
+        self.assertEqual(masked_account_number, expected_masked_account_number)
 
     def test_transaction_serializer(self) -> None:
         data = self.serializer.data
