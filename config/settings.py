@@ -32,7 +32,7 @@ SECRET_KEY = "django-insecure-9$-6w3t=n3a+5te1!w)4kk@hh-1@yyq_0z1k!tm$hbf78h2on0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS: List[str] = []
+ALLOWED_HOSTS: List[str] = ["woojinan.pythonanywhere.com"]
 
 # Application definition
 
@@ -158,6 +158,7 @@ DEFAULT_CHARSET = "utf-8"
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = ".static_root"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
